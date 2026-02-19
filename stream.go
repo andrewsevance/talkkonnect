@@ -106,6 +106,11 @@ func (b *Talkkonnect) StartSource() error {
 			b.splayIntoStream(eventSound.FileName, float32(v))
 		}
 	}
+	// Ensure device is valid before starting capture
+	if b.Stream.deviceSource == nil {
+		log.Println("error: Audio device is nil, cannot start capture")
+		return errState
+	}
 	b.Stream.deviceSource.CaptureStart()
 	b.Stream.sourceStop = make(chan bool)
 	go b.sourceRoutine()
@@ -119,8 +124,7 @@ func (b *Talkkonnect) StopSource() error {
 	close(b.Stream.sourceStop)
 	b.Stream.sourceStop = nil
 	b.Stream.deviceSource.CaptureStop()
-	b.Stream.deviceSource.CaptureCloseDevice()
-
+	// Device remains open for next transmission - only stop capture
 	var eventSound EventSoundStruct = findEventSound("rogerbeep")
 	if eventSound.Enabled {
 		GPIOOutPin("transmit", "on")
@@ -132,8 +136,6 @@ func (b *Talkkonnect) StopSource() error {
 		GPIOOutPin("transmit", "off")
 		//MyLedStripTransmitLEDOff()
 	}
-
-	b.Stream.deviceSource = openal.CaptureOpenDevice("", gumble.AudioSampleRate, openal.FormatMono16, uint32(b.Stream.sourceFrameSize))
 
 	return nil
 }
@@ -217,7 +219,7 @@ func (b *Talkkonnect) sourceRoutine() {
 	stop := b.Stream.sourceStop
 
 	outgoing := b.Stream.client.AudioOutgoing()
-	defer close(outgoing)
+	// Don\'t close outgoing - it\'s managed by the gumble library
 
 	for {
 		select {
