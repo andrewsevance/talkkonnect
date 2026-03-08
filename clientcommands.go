@@ -55,7 +55,9 @@ func FatalCleanUp(message string) {
 	log.Println("alert: Talkkonnect Terminated Abnormally with the Error(s) As Described Above, Ignore any GPIO errors if you are not using Single Board Computer.")
 	log.Println("info: This Screen will close in 5 seconds")
 	time.Sleep(5 * time.Second)
-	term.Close()
+	if !DaemonMode {
+		term.Close()
+	}
 	os.Exit(1)
 }
 
@@ -82,7 +84,9 @@ func CleanUp(withShutdown bool) {
 		//		MyLedStripGPIOOffAll()
 	}
 
-	term.Close()
+	if !DaemonMode {
+		term.Close()
+	}
 	fmt.Println("SIGHUP Termination of Program Requested by User...shutting down talkkonnect")
 	if withShutdown {
 		time.Sleep(5 * time.Second)

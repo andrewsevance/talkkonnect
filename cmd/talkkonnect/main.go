@@ -32,12 +32,14 @@ package main
 
 import (
 	"flag"
-	"github.com/talkkonnect/talkkonnect"
 	"fmt"
 	"log"
 	"os"
-	"runtime/pprof"
 	"runtime"
+	"runtime/pprof"
+
+	"github.com/sevlyar/go-daemon"
+	"github.com/talkkonnect/talkkonnect"
 )
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")
@@ -48,36 +50,61 @@ var serverindex = flag.String("serverindex", "0", "jump to server index [n]")
 func main() {
 
 	config := flag.String("config", "/home/talkkonnect/gocode/src/github.com/talkkonnect/talkkonnect/talkkonnect.xml", "full path to talkkonnect.xml configuration file")
+	daemonMode := flag.Bool("daemon", false, "run in daemon mode")
 
 	flag.Usage = talkkonnectusage
 	flag.Parse()
 
-  if *cpuprofile != "" {
-        f, err := os.Create(*cpuprofile)
-        if err != nil {
-            log.Fatal("could not create CPU profile: ", err)
-        }
-        if err := pprof.StartCPUProfile(f); err != nil {
-            log.Fatal("could not start CPU profile: ", err)
-        }
-        defer pprof.StopCPUProfile()
-    }
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
 
-    if *memprofile != "" {
-        f, err := os.Create(*memprofile)
-        if err != nil {
-            log.Fatal("could not create memory profile: ", err)
-        }
-        runtime.GC() // get up-to-date statistics
-        if err := pprof.WriteHeapProfile(f); err != nil {
-            log.Fatal("could not write memory profile: ", err)
-        }
-        f.Close()
-    }
+	if *memprofile != "" {
+		f, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal("could not create memory profile: ", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			log.Fatal("could not write memory profile: ", err)
+		}
+		f.Close()
+	}
+
+	if *daemonMode {
+		log.Println("info: Starting talkkonnect in daemon mode...")
+		cntxt := &daemon.Context{
+			PidFileName: "talkkonnect-daemon.pid",
+			PidFilePerm: 0644,
+			LogFileName: "talkkonnect-daemon.log",
+			LogFilePerm: 0640,
+			WorkDir:     "./",
+			Umask:       027,
+			Args:        os.Args,
+		}
+
+		d, err := cntxt.Reborn()
+		if err != nil {
+			log.Fatal("error: Unable to run daemon: ", err)
+		}
+		if d != nil {
+			fmt.Println("talkkonnect daemon started.")
+			return
+		}
+		defer cntxt.Release()
+
+		log.Println("info: talkkonnect daemon is now running")
+		talkkonnect.DaemonMode = true
+	}
 
 	talkkonnect.Init(*config, *serverindex)
-
-
 
 }
 

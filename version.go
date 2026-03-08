@@ -31,11 +31,15 @@
 package talkkonnect
 
 const (
-	talkkonnectVersion  string = "2.44.01"
-	talkkonnectReleased string = "28 July 2025"
+	talkkonnectVersion  string = "3.00.01"
+	talkkonnectReleased string = "08 March 2026"
 )
 
 /* Release Notes
+version 3.00.01
+talkkonnect now supports daemon mode no need to rely on screen anymore
+talkkonnect has an online configuration editor available at port 8080/config
+
 version 2.44.01
 fixed talkkonnect to be able to join sub channels from xml config
 version 2.42.03

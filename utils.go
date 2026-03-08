@@ -58,7 +58,9 @@ import (
 )
 
 func reset() {
-	term.Sync()
+	if !DaemonMode {
+		term.Sync()
+	}
 }
 
 func esc(str string) string {

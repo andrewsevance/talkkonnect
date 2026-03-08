@@ -59,6 +59,7 @@ import (
 var (
 	tmessage   string
 	isrepeattx bool = true
+	DaemonMode bool = false
 )
 
 type Talkkonnect struct {
@@ -87,17 +88,19 @@ type ChannelsListStruct struct {
 }
 
 func Init(file string, ServerIndex string) {
-	err := term.Init()
-	if err != nil {
-		FatalCleanUp("Cannot Initialize Terminal Error: " + err.Error())
+	if !DaemonMode {
+		err := term.Init()
+		if err != nil {
+			FatalCleanUp("Cannot Initialize Terminal Error: " + err.Error())
+		}
+		defer term.Close()
 	}
-	defer term.Close()
 
 	colog.Register()
 	colog.SetOutput(os.Stdout)
 
 	ConfigXMLFile = file
-	err = readxmlconfig(ConfigXMLFile, false)
+	err := readxmlconfig(ConfigXMLFile, false)
 	if err != nil {
 		message := err.Error()
 		FatalCleanUp(message)
@@ -226,6 +229,7 @@ func Init(file string, ServerIndex string) {
 	if Config.Global.Software.RemoteControl.HTTP.Enabled && !HTTPServRunning {
 		go func() {
 			http.HandleFunc("/", b.httpAPI)
+			http.HandleFunc("/config", b.httpConfig)
 			if err := http.ListenAndServe(":"+Config.Global.Software.RemoteControl.HTTP.ListenPort, nil); err != nil {
 				FatalCleanUp("Problem Starting HTTP API Server " + err.Error())
 			}
@@ -579,6 +583,11 @@ func (b *Talkkonnect) ClientStart() {
 
 keyPressListenerLoop:
 	for {
+		if DaemonMode {
+			// In daemon mode, there is no terminal to read from. Just keep alive without CPU spinning.
+			time.Sleep(1 * time.Second)
+			continue
+		}
 		if IsConnected {
 			switch ev := term.PollEvent(); ev.Type {
 			case term.EventKey:
